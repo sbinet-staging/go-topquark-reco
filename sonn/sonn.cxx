@@ -20,6 +20,22 @@ extern TH1F *h_pT_jet_smear;
 extern TH1F *h_theta_lep_ee_smear;
 extern TH1F *h_theta_lep_mm_smear;
 
+#include <stdio.h>
+extern FILE* g_log;
+extern FILE* g_chk;
+
+void init_logs() {
+	g_log = fopen("stream.txt", "w+");
+	g_chk = fopen("ref.txt", "w+");
+}
+
+void stop_logs() {
+	fflush(g_log);
+	fclose(g_log);
+
+	fflush(g_chk);
+	fclose(g_chk);
+}
 
 void load_smearing_histos(const char *fname) {
 	auto f = TFile::Open(fname);

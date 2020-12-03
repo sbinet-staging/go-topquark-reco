@@ -77,3 +77,11 @@ func bool2int(v bool) C.int {
 	}
 	return 0
 }
+
+func InitLogs() {
+	C.init_logs()
+}
+
+func StopLogs() {
+	C.stop_logs()
+}

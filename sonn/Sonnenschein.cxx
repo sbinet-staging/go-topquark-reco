@@ -20,6 +20,18 @@ TH1F *h_pT_jet_smear;
 TH1F *h_theta_lep_ee_smear;
 TH1F *h_theta_lep_mm_smear;
 
+FILE *g_log = NULL;
+FILE *g_chk = NULL;
+
+#define mlog(fmt, ...) fprintf(g_chk, fmt, ##__VA_ARGS__)
+
+Double_t capture(Double_t v) {
+	if (g_log != NULL) {
+		fprintf(g_log, "%1.12e\n", v);
+	}
+	return v;
+}
+
 namespace AnalyticalTopReconstruction{
   
   // Compute the complete four vectors of top quarks
@@ -134,11 +146,11 @@ namespace AnalyticalTopReconstruction{
 	Double_t smear_scale_jet_1 = 1.;
 
 	if (applySmearing) {
-	  if (lep_is_e)          smear_scale_0 = h_pT_lep_ee_smear->GetRandom();
-	  else if (lep_is_mu)    smear_scale_0 = h_pT_lep_mm_smear->GetRandom();
+	  if (lep_is_e)          smear_scale_0 = capture(h_pT_lep_ee_smear->GetRandom());
+	  else if (lep_is_mu)    smear_scale_0 = capture(h_pT_lep_mm_smear->GetRandom());
 	  else                   smear_scale_0 = 1.;
-	  if (lepbar_is_e)       smear_scale_1 = h_pT_lep_ee_smear->GetRandom();
-	  else if (lepbar_is_mu) smear_scale_1 = h_pT_lep_mm_smear->GetRandom();
+	  if (lepbar_is_e)       smear_scale_1 = capture(h_pT_lep_ee_smear->GetRandom());
+	  else if (lepbar_is_mu) smear_scale_1 = capture(h_pT_lep_mm_smear->GetRandom());
 	  else                   smear_scale_1 = 1.;
 	}
 	
@@ -171,10 +183,10 @@ namespace AnalyticalTopReconstruction{
 	Double_t smear_angle_mm_lepbar = 0.;
 
 	if (applySmearing) {
-	  smear_angle_ee_lep    = h_theta_lep_ee_smear->GetRandom();
-	  smear_angle_ee_lepbar = h_theta_lep_ee_smear->GetRandom();
-	  smear_angle_mm_lep    = h_theta_lep_mm_smear->GetRandom();
-	  smear_angle_mm_lepbar = h_theta_lep_mm_smear->GetRandom();
+	  smear_angle_ee_lep    = capture(h_theta_lep_ee_smear->GetRandom());
+	  smear_angle_ee_lepbar = capture(h_theta_lep_ee_smear->GetRandom());
+	  smear_angle_mm_lep    = capture(h_theta_lep_mm_smear->GetRandom());
+	  smear_angle_mm_lepbar = capture(h_theta_lep_mm_smear->GetRandom());
 	}
 	
 	if (tlv_lep.Pt() > tlv_lepbar.Pt()) {
@@ -186,15 +198,15 @@ namespace AnalyticalTopReconstruction{
 	  else if (lepbar_is_mu) lepbar_v_pt.Rotate(smear_angle_mm_lepbar, transe_lepbar_axis);
 	}
 	
-	lep_v_pt.Rotate(r.Rndm()*2.*TMath::Pi(), lep_v_pt_1);
-	lepbar_v_pt.Rotate(r.Rndm()*2.*TMath::Pi(), lepbar_v_pt_1);
+	lep_v_pt.Rotate(capture(r.Rndm())*2.*TMath::Pi(), lep_v_pt_1);
+	lepbar_v_pt.Rotate(capture(r.Rndm())*2.*TMath::Pi(), lepbar_v_pt_1);
 	
 	lep.SetPxPyPzE(   lep_v_pt[0],    lep_v_pt[1],    lep_v_pt[2],    lep_pt_smear.E());
 	lepbar.SetPxPyPzE(lepbar_v_pt[0], lepbar_v_pt[1], lepbar_v_pt[2], lepbar_pt_smear.E());
 
 	if (applySmearing) {
-	  smear_scale_jet_0 = h_pT_jet_smear->GetRandom();
-	  smear_scale_jet_1 = h_pT_jet_smear->GetRandom();
+	  smear_scale_jet_0 = capture(h_pT_jet_smear->GetRandom());
+	  smear_scale_jet_1 = capture(h_pT_jet_smear->GetRandom());
 	}
 	
 	if (i_jets==0) {
@@ -231,15 +243,15 @@ namespace AnalyticalTopReconstruction{
 	Double_t smear_angle_jetbar = 0.0;
 	
 	if (applySmearing) {
-	  smear_angle_jet    = h_theta_jet_smear->GetRandom();
-	  smear_angle_jetbar = h_theta_jetbar_smear->GetRandom();
+	  smear_angle_jet    = capture(h_theta_jet_smear->GetRandom());
+	  smear_angle_jetbar = capture(h_theta_jetbar_smear->GetRandom());
 	}
 
 	jet_v_pt.Rotate(smear_angle_jet, transe_jet_axis);
 	jetbar_v_pt.Rotate(smear_angle_jetbar, transe_jetbar_axis);
 	
-	jet_v_pt.Rotate(r.Rndm()*2.*TMath::Pi(), jet_v_pt_1);
-	jetbar_v_pt.Rotate(r.Rndm()*2.*TMath::Pi(), jetbar_v_pt_1);
+	jet_v_pt.Rotate(capture(r.Rndm())*2.*TMath::Pi(), jet_v_pt_1);
+	jetbar_v_pt.Rotate(capture(r.Rndm())*2.*TMath::Pi(), jetbar_v_pt_1);
 	
 	jet.SetPxPyPzE(   jet_v_pt[0],    jet_v_pt[1],    jet_v_pt[2],    jet_pt_smear.E());
 	jetbar.SetPxPyPzE(jetbar_v_pt[0], jetbar_v_pt[1], jetbar_v_pt[2], jetbar_pt_smear.E());
@@ -575,6 +587,19 @@ namespace AnalyticalTopReconstruction{
     Top_fin.SetPxPyPzE(top_p_sum[0],    top_p_sum[1],    top_p_sum[2],    Top_fin_E);
     Topbar_fin.SetPxPyPzE(topbar_p_sum[0], topbar_p_sum[1], topbar_p_sum[2], Topbar_fin_E);
     
+	mlog("top: (%e, %e, %e, %e)\n",
+		Top_fin.Px(),
+		Top_fin.Py(),
+		Top_fin.Pz(),
+		Top_fin.E()
+	);
+	mlog("tob: (%e, %e, %e, %e)\n",
+		Topbar_fin.Px(),
+		Topbar_fin.Py(),
+		Topbar_fin.Pz(),
+		Topbar_fin.E()
+	);
+
     return_top_tbar[0] = Top_fin;
     return_top_tbar[1] = Topbar_fin;
     return return_top_tbar;

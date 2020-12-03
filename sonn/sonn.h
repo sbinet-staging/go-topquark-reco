@@ -23,6 +23,9 @@ tlvs_t sonn(
 
 void load_smearing_histos(const char* fname);
 
+void init_logs();
+void stop_logs();
+
 #ifdef __cplusplus
 } // extern "C"
 #endif
