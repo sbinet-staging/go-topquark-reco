@@ -15,6 +15,9 @@ import (
 
 func main() {
 
+	sonn.InitLogs()
+	defer sonn.StopLogs()
+
 	// Open the test ROOT file
 	f, err := groot.Open("../testdata/data.root")
 	if err != nil {
