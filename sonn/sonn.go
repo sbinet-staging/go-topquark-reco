@@ -1,9 +1,14 @@
 package sonn
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"math"
+	"os"
+	"strings"
 
 	"go-hep.org/x/exp/roots"
 	"go-hep.org/x/hep/fmom"
@@ -15,16 +20,52 @@ import (
 	"gonum.org/v1/gonum/spatial/r3"
 )
 
+type myrand struct {
+	r io.Reader
+	w *os.File
+	v float64
+}
+
+func (mr *myrand) Rand() float64 {
+	_, err := fmt.Fscanf(mr.r, "%e\n", &mr.v)
+	if err != nil {
+		fmt.Fprintf(mr.w, "error: %+v\n", err)
+	}
+	fmt.Fprintf(mr.w, "%1.12e\n", mr.v)
+	return mr.v
+}
+func (mr *myrand) Float64() float64 {
+	return mr.Rand()
+}
+
+type Float64er interface {
+	Float64() float64
+}
+
+type hbookRand1D interface {
+	Rand() float64
+}
+
+func mlog(format string, args ...interface{}) {
+	if !strings.HasSuffix(format, "\n") {
+		format += "\n"
+	}
+	_, _ = fmt.Fprintf(gchk, format, args...)
+}
+
+var mr *myrand
+var gchk *os.File
+
 // SmearingHistos holds the histograms used to smear 4-vectors.
 type SmearingHistos struct {
-	PtLepEE    hbook.Rand1D
-	PtLepMu    hbook.Rand1D
-	ThetaLepEE hbook.Rand1D
-	ThetaLepMu hbook.Rand1D
+	PtLepEE    hbookRand1D
+	PtLepMu    hbookRand1D
+	ThetaLepEE hbookRand1D
+	ThetaLepMu hbookRand1D
 
-	PtJet       hbook.Rand1D
-	ThetaJet    hbook.Rand1D
-	ThetaJetBar hbook.Rand1D
+	PtJet       hbookRand1D
+	ThetaJet    hbookRand1D
+	ThetaJetBar hbookRand1D
 
 	Mlblb *hbook.H1D
 }
@@ -38,6 +79,25 @@ func NewSmearingHistos(fname string, seed uint64) (*SmearingHistos, error) {
 	}
 	defer f.Close()
 
+	gchk, err = os.Create("chk.txt")
+	if err != nil {
+		return nil, err
+	}
+
+	rr, err := ioutil.ReadFile("go-stream.txt")
+	if err != nil {
+		return nil, err
+	}
+	ww, err := os.Create("out-stream.txt")
+	if err != nil {
+		return nil, err
+	}
+
+	mr = &myrand{
+		r: bytes.NewReader(rr),
+		w: ww,
+	}
+
 	get := func(name string) *hbook.H1D {
 		o, e := f.Get(name)
 		if e != nil && err != nil {
@@ -47,12 +107,14 @@ func NewSmearingHistos(fname string, seed uint64) (*SmearingHistos, error) {
 		return rootcnv.H1D(o.(*rhist.H1F))
 	}
 
-	gethr := func(name string) hbook.Rand1D {
+	gethr := func(name string) hbookRand1D {
 		h := get(name)
 		if h == nil {
-			return hbook.Rand1D{}
+			return nil
+			//return hbook.Rand1D{}
 		}
-		return hbook.NewRand1D(h, rand.NewSource(seed))
+		return mr
+		//return hbook.NewRand1D(h, rand.NewSource(seed))
 	}
 
 	sh := &SmearingHistos{
@@ -75,6 +137,9 @@ func Sonnenschein(
 	emissx, emissy float64,
 	smearHs *SmearingHistos,
 ) []fmom.PxPyPzE {
+
+	defer mr.w.Sync()
+	defer gchk.Sync()
 
 	// debug.
 	const debug = true
@@ -149,8 +214,11 @@ func Sonnenschein(
 	for i_jets := 0; i_jets < 2; i_jets++ {
 		var (
 			weight_s_sum float64
-			rnd          = rand.New(rand.NewSource(1))
+			rnd          Float64er = rand.New(rand.NewSource(1))
 		)
+		if true {
+			rnd = mr
+		}
 
 		if debug {
 			log.Printf(" Jets combination %d:", i_jets)
@@ -773,6 +841,19 @@ func Sonnenschein(
 
 		Top_fin    = fmom.NewPxPyPzE(top_p_sum.X, top_p_sum.Y, top_p_sum.Z, Top_fin_E)
 		Topbar_fin = fmom.NewPxPyPzE(topbar_p_sum.X, topbar_p_sum.Y, topbar_p_sum.Z, Topbar_fin_E)
+	)
+
+	mlog("top: (%e, %e, %e, %e)\n",
+		Top_fin.Px(),
+		Top_fin.Py(),
+		Top_fin.Pz(),
+		Top_fin.E(),
+	)
+	mlog("tob: (%e, %e, %e, %e)\n",
+		Topbar_fin.Px(),
+		Topbar_fin.Py(),
+		Topbar_fin.Pz(),
+		Topbar_fin.E(),
 	)
 
 	return []fmom.PxPyPzE{Top_fin, Topbar_fin}
